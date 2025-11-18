@@ -11,7 +11,7 @@ app.use(express.json());
 app.use(cors());
 
 app.post("/api/v1/signup", async (req, res) => {
-	const { username,password  } = req.body;
+	const { username, password } = req.body;
 
 	try {
 		await User.create({
@@ -44,18 +44,18 @@ app.post("/api/v1/signin", async (req, res) => {
 			res.status(401).json({ message: "Invalid credentials" });
 		}
 	} catch (e: any) {
-        res.json({
-            message:"sign failed", 
-            error: e.message
-        })
-    }
+		res.json({
+			message: "sign failed",
+			error: e.message
+		})
+	}
 });
 
 app.post("/api/v1/content", userMiddleware, async (req, res) => {
 
 	const { link, type } = req.body;
 
-    try {
+	try {
 		await Content.create({
 			link,
 			type,
@@ -94,8 +94,8 @@ app.delete("/api/v1/content", userMiddleware, async (req, res) => {
 	});
 });
 
-app.post("/api/v1/brain/share",userMiddleware, async (req, res) => {
-	const {share} = req.body;
+app.post("/api/v1/brain/share", userMiddleware, async (req, res) => {
+	const { share } = req.body;
 
 	if (share) {
 		const existingLink = await Link.findOne({
@@ -119,7 +119,7 @@ app.post("/api/v1/brain/share",userMiddleware, async (req, res) => {
 		res.json({
 			hash,
 		})
-	    
+
 	} else {
 		await Link.deleteOne({
 			userId: req.userId
@@ -132,11 +132,11 @@ app.post("/api/v1/brain/share",userMiddleware, async (req, res) => {
 
 });
 
-app.get("/api/v1/brain/:shareLink",  async (req, res) => {
+app.get("/api/v1/brain/:shareLink", async (req, res) => {
 	const hash = req.params.shareLink;
 
 	const link = await Link.findOne({
-        hash
+		hash
 	});
 
 	if (!link) {
@@ -150,7 +150,7 @@ app.get("/api/v1/brain/:shareLink",  async (req, res) => {
 		userId: link.userId
 	})
 
-    //console.log(link);
+	//console.log(link);
 
 	const user = await User.findOne({
 		_id: link.userId

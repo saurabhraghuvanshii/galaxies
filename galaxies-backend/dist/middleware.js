@@ -7,9 +7,27 @@ exports.userMiddleware = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const config_1 = require("./config");
 const userMiddleware = (req, res, next) => {
-    const header = req.headers["authorization"];
-    const decoded = jsonwebtoken_1.default.verify(header, config_1.JWT_SECRET);
-    if (decoded) {
+    try {
+        const header = req.headers["authorization"];
+        if (!header) {
+            res.status(403).json({
+                message: "You are not logged in"
+            });
+            return;
+        }
+        // Handle "Bearer token" format or just "token"
+        let token = header;
+        if (token.startsWith("Bearer ")) {
+            token = token.substring(7);
+        }
+        // Validate token format (should not be empty)
+        if (!token || token.trim() === "") {
+            res.status(403).json({
+                message: "Invalid token format"
+            });
+            return;
+        }
+        const decoded = jsonwebtoken_1.default.verify(token, config_1.JWT_SECRET);
         if (typeof decoded === "string") {
             res.status(403).json({
                 message: "You are not logged in"
@@ -19,9 +37,11 @@ const userMiddleware = (req, res, next) => {
         req.userId = decoded.id;
         next();
     }
-    else {
+    catch (e) {
+        console.error("JWT verification error:", e.message);
         res.status(403).json({
-            message: "You are not logged in"
+            message: "You are not logged in",
+            error: e.message
         });
     }
 };

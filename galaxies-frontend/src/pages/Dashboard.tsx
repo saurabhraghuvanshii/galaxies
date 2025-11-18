@@ -13,14 +13,14 @@ const Dashboard = () => {
     const [modalOpen, setModalOpen] = useState(false);
     const [isSidebarHovered, setIsSidebarHovered] = useState(false);
     const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth >= 1024);
-    const {contents, refresh } = useContent();
-
-    useEffect(()=> {
-        refresh();
-    },[modalOpen])
+    const { contents, refresh } = useContent();
 
     useEffect(() => {
-        const handleMouseMove = (e:any) => {
+        refresh();
+    }, [modalOpen])
+
+    useEffect(() => {
+        const handleMouseMove = (e: any) => {
             if (e.clientX < 50 && !isLargeScreen) {
                 setIsSidebarHovered(true);
             } else {
@@ -44,16 +44,15 @@ const Dashboard = () => {
         <div className="relative flex min-h-screen bg-gray-400 overflow-y-scroll no-scrollbar">
             <Sidebar />
             <div
-                className={`p-4 flex-grow min-h-screen bg-gray-400 transition-all duration-500 ${
-                    isSidebarHovered || isLargeScreen ? 'ml-72' : 'ml-0'
-                }`}
+                className={`p-4 flex-grow min-h-screen bg-gray-400 transition-all duration-500 ${isSidebarHovered || isLargeScreen ? 'ml-72' : 'ml-0'
+                    }`}
             >
                 <CreateContentModal open={modalOpen} onClose={() => setModalOpen(false)} />
                 <div className="flex gap-4 justify-end py-4 px-4">
-                    <Button onClick={async ()=>{
-                        const response = await axios.post(`${BACKEND_URL}/api/v1/brain/share`,{
+                    <Button onClick={async () => {
+                        const response = await axios.post(`${BACKEND_URL}/api/v1/brain/share`, {
                             share: true
-                        },{
+                        }, {
                             headers: {
                                 "Authorization": localStorage.getItem("token")
                             }
@@ -64,7 +63,7 @@ const Dashboard = () => {
                     <Button onClick={() => setModalOpen(true)} variant="primary" text="Add Content" startIcon={<PluseIcon />} />
                 </div>
                 <div className="flex gap-4 pl-4 flex-wrap">
-                    {contents.map(({type, link, title})=><Card type={type} link={link} title={title}/>)}
+                    {contents.map(({ type, link, title }) => <Card type={type} link={link} title={title} />)}
                 </div>
             </div>
         </div>

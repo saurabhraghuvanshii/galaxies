@@ -19,23 +19,55 @@ const db_1 = require("./db");
 const middleware_1 = require("./middleware");
 const utils_1 = require("./utils");
 const cors_1 = __importDefault(require("cors"));
+const path_1 = __importDefault(require("path"));
+const mongoose_1 = __importDefault(require("mongoose"));
 const app = (0, express_1.default)();
 app.use(express_1.default.json());
 app.use((0, cors_1.default)());
 app.post("/api/v1/signup", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { username, password } = req.body;
+    if (!username || !password) {
+        res.status(400).json({
+            message: "Username and password are required",
+        });
+        return;
+    }
     try {
+        // Check if user already exists
+        const existingUser = yield db_1.User.findOne({ username });
+        if (existingUser) {
+            res.status(409).json({
+                message: "Username already exists",
+            });
+            return;
+        }
         yield db_1.User.create({
             username,
             password,
         });
         res.json({
-            message: "sigup successful",
+            message: "signup successful",
         });
     }
     catch (e) {
-        res.status(401).json({
-            message: "signup failed ",
+        console.error("Signup error:", e);
+        // Check if MongoDB is connected
+        if (mongoose_1.default.connection.readyState !== 1) {
+            res.status(503).json({
+                message: "Database connection error",
+                error: "Database is not connected. Please try again later.",
+            });
+            return;
+        }
+        // Handle duplicate key error
+        if (e.code === 11000) {
+            res.status(409).json({
+                message: "Username already exists",
+            });
+            return;
+        }
+        res.status(500).json({
+            message: "signup failed",
             error: e.message,
         });
     }
@@ -77,13 +109,28 @@ app.post("/api/v1/content", middleware_1.userMiddleware, (req, res) => __awaiter
     }
 }));
 app.get("/api/v1/content", middleware_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const userId = req.userId;
-    const content = yield db_1.Content.find({
-        userId,
-    }).populate("userId", "username");
-    res.json({
-        content,
-    });
+    try {
+        const userId = req.userId;
+        if (!userId) {
+            res.status(403).json({
+                message: "User ID not found",
+            });
+            return;
+        }
+        const content = yield db_1.Content.find({
+            userId: userId,
+        }).populate("userId", "username");
+        res.json({
+            content,
+        });
+    }
+    catch (e) {
+        console.error("Content fetch error:", e);
+        res.status(500).json({
+            message: "Error fetching content",
+            error: e.message,
+        });
+    }
 }));
 app.delete("/api/v1/content", middleware_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const contentId = req.body.contentId;
@@ -148,4 +195,35 @@ app.get("/api/v1/brain/:shareLink", (req, res) => __awaiter(void 0, void 0, void
         content: content
     });
 }));
-app.listen(3000);
+// Serve static files from the frontend dist folder
+app.use(express_1.default.static(path_1.default.join(__dirname, "../../galaxies-frontend/dist")));
+// Catch-all handler: send back React's index.html file for client-side routing
+app.get("*", (req, res) => {
+    // Don't serve index.html for API routes
+    if (req.path.startsWith("/api")) {
+        res.status(404).json({ message: "API endpoint not found" });
+        return;
+    }
+    res.sendFile(path_1.default.join(__dirname, "../../galaxies-frontend/dist/index.html"));
+});
+// Wait for MongoDB connection before starting server
+const startServer = () => {
+    app.listen(3000, () => {
+        console.log('Server is running on port 3000');
+    });
+};
+if (mongoose_1.default.connection.readyState === 1) {
+    // Already connected
+    console.log('MongoDB connection is ready');
+    startServer();
+}
+else {
+    // Wait for connection
+    mongoose_1.default.connection.once('open', () => {
+        console.log('MongoDB connection is ready');
+        startServer();
+    });
+}
+mongoose_1.default.connection.on('error', (error) => {
+    console.error('MongoDB connection error:', error);
+});
